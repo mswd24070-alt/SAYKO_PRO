@@ -1,1 +1,0 @@
-# SAYKO_PRO
