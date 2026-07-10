@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html dir="rtl">
+<head>
+    <metacharset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>👑 لوحة تحكم سايكو VIP 👑</title>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <style>
+        :root { --cyan: #00f2ff; --bg: #0a0a0a; --card: #151515; }
+        body { background: var(--bg); color: white; font-family: 'Segoe UI', sans-serif; margin: 0; padding: 15px; }
+        .container { max-width: 500px; margin: auto; text-align: center; }
+        h1 { color: var(--cyan); text-shadow: 0 0 15px var(--cyan); font-size: 28px; margin-top: 20px; }
+        .main-btn { background: var(--cyan); color: #000; border: none; padding: 18px; width: 100%; border-radius: 15px; font-weight: bold; font-size: 18px; cursor: pointer; transition: 0.3s; box-shadow: 0 5px 15px rgba(0,242,255,0.3); margin-top:10px; }
+        .search-section { background: var(--card); padding: 20px; border-radius: 20px; border: 1px solid #333; margin-top: 20px; }
+        .input-box { width: 100%; padding: 15px; margin: 10px 0; border-radius: 12px; border: 1px solid #444; background: #000; color: var(--cyan); text-align: center; font-size: 18px; box-sizing: border-box; }
+        #res-card { d displaynone; background: var(--card); border: 1px solid var(--cyan); border-radius: 20px; padding: 20px; margin-top: 20px; text-align: right; animation: fadeIn 0.5s; }
+        .btn-group { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 15px; }
+        .btn-act { padding: 12px; border-radius: 10px; border: none; font-weight: bold; color: white; cursor: pointer; }
+        .logout-btn { background: #ff3333; color: white; padding: 10px 20px; border-radius: 10px; text-decoration: none; float: left; font-size: 16px; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .swal2-popup { border-radius: 30px !important; background: #1a1a1a !important; color: white !important; border: 1px solid var(--cyan) !important; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="/logout" class="logout-btn">🚪 خروج</a>
+        <h1>👑 سايكو VIP 👑</h1>
+        <button class="main-btn" onclick="openCreateModal()">➕ إنشاء حساب جديد</button>
+        
+        <div class="search-section">
+            <input type="number" id="sq" class="input-box" placeholder="🔍 ابحث برقم الحساب">
+            <button class="main-btn" style="background:white; color:black;" onclick="search()">فحص البيانات 🔎</button>
+        </div>
+
+        <div id="res-card">
+            <p>👤 <b>الاسم:</b> <span id="r-name"></span></p>
+            <p>🔑 <b>كلمة السر:</b> <span id="r-pass"></span></p>
+            <p>💰 <b>الرصيد:</b> <span id="r-bal" style="color:#00ff00"></span> SDG</p>
+            <div class="btn-group">
+                <button class="btn-act" style="background:#28a745" onclick="openPayModal()">💸 شحن</button>
+                <button class="btn-act" style="background:#ff3333" onclick="deleteAcc()">🗑️ حذف</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        async function openCreateModal() {
+            const { value: formValues } = await Swal.fire({
+                title: '💎 حساب جديد',
+                html: '<input id="swal-fn" class="swal2-input" placeholder="اسم العميل">' +
+                      '<input id="swal-ps" class="swal2-input" placeholder="كلمة السر">' +
+                      '<input id="swal-bl" type="number" class="swal2-input" value="1000000">',
+                focusConfirm: false,
+                confirmButtonText: 'تفعيل الملكية 👑',
+                confirmButtonColor: '#00f2ff',
+                preConfirm: () => {
+                    return { 
+                        name: document.getElementById('swal-fn').value, 
+                        pass: document.getElementById('swal-ps').value, 
+                        bal: document.getElementById('swal-bl').value 
+                    }
+                }
+            });
+
+            if (formValues) {
+                const res = await fetch('/api/reg', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(formValues)});
+                const d = await res.json();
+                Swal.fire({
+                    icon: 'success',
+                    title: 'تم التفعيل بنجاح',
+                    html: 'رقم الحساب: <b style="color:#00f2ff; font-size:24px;">' + d.acc + '</b>',
+                    confirmButtonText: 'تم'
+                });
+            }
+        }
+
+        async function search(){
+            const acc = document.getElementById('sq').value;
+            const res = await fetch('/api/search/'+acc); 
+            const d = await res.json();
+            if(d.status==='success'){
+                document.getElementById('r-name').innerText = d.u.full_name; 
+                document.getElementById('r-pass').innerText = d.u.password;
+                document.getElementById('r-bal').innerText = Number(d.u.balance).toLocaleString();
+                document.getElementById('res-card').style.display='block';
+            } else {
+                Swal.fire('❌ خطأ', 'الحساب غير موجود', 'error');
+            }
+        }
+
+        async function openPayModal() {
+            const acc = document.getElementById('sq').value;
+            const { value: amt } = await Swal.fire({
+                title: '💸 شحن رصيد',
+                input: 'number',
+                inputLabel: 'أدخل المبلغ المراد شحنه',
+                inputPlaceholder: 'المبلغ...',
+                showCancelButton: true,
+                confirmButtonText: 'شحن الآن',
+                confirmButtonColor: '#28a745'
+            });
+
+            if (amt) {
+                await fetch('/api/pay', {
+                    method:'POST', 
+                    headers:{'Content-Type':'application/json'}, 
+                    body:JSON.stringify({acc, amt})
+                });
+                Swal.fire('✅ تم الشحن', 'تمت إضافة المبلغ بنجاح', 'success');
+                search();
+            }
+        }
+
+        function deleteAcc() {
+            const acc = document.getElementById('sq').value;
+            Swal.fire({
+                title: 'هل أنت متأكد؟',
+                text: "سيتم حذف الحساب نهائياً!",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#ff3333',
+                confirmButtonText: 'نعم، احذف!'
+            }).then(async (result) => {
+                if (result.isConfirmed) {
+                    await fetch('/api/del', {
+                        method:'POST', 
+                        headers:{'Content-Type':'application/json'}, 
+                        body:JSON.stringify({acc})
+                    });
+                    location.reload();
+                }
+            });
+        }
+    </script>
+</body>
+</html>
