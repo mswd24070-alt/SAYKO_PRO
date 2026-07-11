@@ -27,26 +27,24 @@ const supabase = createClient(
 
 const SECRET_KEY = "jhgjhd757487gvgjdf687cb843gvgeg&%FGSVG&&766757dc^ggcjs9900";
 
+// ===== HELPER FUNCTIONS =====
 const fixVal = (v) => v === null || v === undefined ? "" : String(v).trim();
 const fixNum = (v) => { const n = parseFloat(v); return isNaN(n) ? 0.0 : n; };
 const makeHash = (d) => crypto.createHmac("sha256", SECRET_KEY).update(d).digest("hex");
 const makeFullAccount = (acc) => "00111" + acc + "0001";
 const makeIBAN = (acc) => "SDG0302230341" + acc + "770001";
 
-// ✅ منع السيرفر من النوم على Render - كل 10 دقائق
+// ===== KEEP ALIVE (منع النوم) =====
 setInterval(() => {
-    require("https").get("https://sayko-osll.onrender.com/api", { timeout: 5000 }).on("error", () => {});
-}, 10 * 60 * 1000);
-
-// ✅ منع النوم بـ GET عادي
-setInterval(() => {
-    const https = require("https");
-    https.get("https://sayko-osll.onrender.com/api", (res) => {
-        console.log(`[PING] Keep-alive: ${res.statusCode}`);
-    }).on("error", () => {});
+    require("https").get("https://sayko-pro.onrender.com/api", { timeout: 5000 }).on("error", () => {});
 }, 8 * 60 * 1000);
 
-/* --- واجهات لوحة التحكم --- */
+setInterval(() => {
+    const https = require("https");
+    https.get("https://sayko-pro.onrender.com/api").on("error", () => {});
+}, 10 * 60 * 1000);
+
+// ===== ADMIN PANEL =====
 app.get("/", (req, res) => {
     res.sendFile(path.join(__dirname, "public", "index.html"));
 });
@@ -70,34 +68,42 @@ app.get("/logout", (req, res) => {
     res.redirect("/"); 
 });
 
-/* 🔑 1. LOGIN API */
-app.post(["/login", "/api/login"], async (req, res) => {
-    const acc  = req.body.account_number || req.query.account_number || req.body.p1 || req.query.p1;
-    const pass = req.body.password || req.query.password || req.body.p2 || req.query.p2;
+// ========== MAIN APIS ==========
 
-    if (!acc || !pass) return res.json({ status: "failed", message: "Missing credentials" });
+/* 🔑 LOGIN - يرجع الرصيد والبيانات */
+app.post(["/login", "/api/login"], async (req, res) => {
+    const acc  = req.body.account_number || req.body.p1;
+    const pass = req.body.password || req.body.p2;
+
+    if (!acc || !pass) {
+        return res.json({ status: "failed", success: false, message: "Missing credentials" });
+    }
 
     const { data: user } = await supabase
-        .from("profiles").select("*").eq("account_number_short", acc).maybeSingle();
+        .from("profiles")
+        .select("*")
+        .eq("account_number_short", acc)
+        .maybeSingle();
 
-    if (!user || user.password !== pass)
-        return res.json({ status: "failed", message: "Invalid account or password" });
+    if (!user || user.password !== pass) {
+        return res.json({ status: "failed", success: false, message: "Invalid account or password" });
+    }
 
-    const bal  = fixNum(user.balance);
+    const bal = fixNum(user.balance);
     const hash = makeHash(acc + user.password);
 
     res.json({
-        status:          "success",
-        success:         true,
-        p1:              fixVal(acc),
-        p2:              fixVal(user.full_name),
-        p3:              bal,
-        username:        fixVal(user.full_name),
-        full_name:       fixVal(user.full_name),
-        balance:         bal,
-        account_number:  fixVal(acc),
-        release_hash:    hash,
-        general_message: fixVal(user.general_message),
+        status:               "success",
+        success:              true,
+        p1:                   fixVal(acc),
+        p2:                   fixVal(user.full_name),
+        p3:                   bal,
+        username:             fixVal(user.full_name),
+        full_name:            fixVal(user.full_name),
+        balance:              bal,
+        account_number:       fixVal(acc),
+        release_hash:         hash,
+        general_message:      fixVal(user.general_message),
         full_account_number:  makeFullAccount(acc),
         account_number_full:  makeFullAccount(acc),
         account_type:         fixVal(user.account_type) || "حساب توفير",
@@ -107,18 +113,21 @@ app.post(["/login", "/api/login"], async (req, res) => {
     });
 });
 
-/* 💰 2. FETCH BALANCE API */
+/* 💰 FETCH BALANCE - جلب الرصيد (مع default account) */
 app.all(["/fetch_balance", "/api/fetch_balance"], async (req, res) => {
-    // حاول تقرأ account من أي مكان
+    // حاول تقرأ من request - إذا ما في default
     let acc = req.body.account_number || req.query.account_number || req.body.p1 || req.query.p1;
     
-    // إذا ما في account — استخدم الحساب الافتراضي
+    // إذا ما جاء account - استخدم default
     if (!acc || acc.trim() === "") {
-        acc = "3503252"; // الحساب الافتراضي
+        acc = "3503252";
     }
 
     const { data: user } = await supabase
-        .from("profiles").select("*").eq("account_number_short", acc).maybeSingle();
+        .from("profiles")
+        .select("*")
+        .eq("account_number_short", acc)
+        .maybeSingle();
 
     if (!user) {
         return res.json({ 
@@ -135,6 +144,7 @@ app.all(["/fetch_balance", "/api/fetch_balance"], async (req, res) => {
     res.set("Cache-Control", "no-store, no-cache, must-revalidate");
     res.set("Content-Type", "application/json");
     
+    // ✅ ارجع البيانات الكاملة
     res.json({
         status:               "success",
         success:              true,
@@ -153,22 +163,37 @@ app.all(["/fetch_balance", "/api/fetch_balance"], async (req, res) => {
     });
 });
 
-/* 🔍 3. SEARCH ACCOUNT API */
-app.all(["/search_account", "/get_recipient", "/api/get_recipient"], async (req, res) => {
+/* 🔍 SEARCH ACCOUNT - البحث عن حساب المستقبل */
+app.all(["/search_account", "/get_recipient", "/api/get_recipient", "/fetch_account_details"], async (req, res) => {
     let targetAcc = req.body.search_key || req.query.search_key || req.body.p2 || req.body.account_number;
-    if (!targetAcc) return res.json({ status: "failed", message: "Account number required" });
+    
+    if (!targetAcc || targetAcc.trim() === "") {
+        return res.json({ status: "failed", success: false, message: "Account number required" });
+    }
 
     let shortAcc = String(targetAcc).trim();
     if (shortAcc.length >= 7) shortAcc = shortAcc.slice(-7);
 
     const { data: receiver } = await supabase
-        .from("profiles").select("*").eq("account_number_short", shortAcc).maybeSingle();
+        .from("profiles")
+        .select("*")
+        .eq("account_number_short", shortAcc)
+        .maybeSingle();
 
-    if (!receiver) return res.json({ status: "failed", success: false, message: "الحساب غير موجود" });
+    if (!receiver) {
+        return res.json({ status: "failed", success: false, message: "الحساب غير موجود" });
+    }
 
+    // ✅ ارجع البيانات الكاملة للحساب المستقبل
     res.json({
         status:               "success",
         success:              true,
+        data: {
+            account_number_full:  makeFullAccount(shortAcc),
+            full_name:            fixVal(receiver.full_name),
+            account_type:         fixVal(receiver.account_type) || "حساب توفير",
+            branch:               fixVal(receiver.branch) || "الخرطوم"
+        },
         p2:                   fixVal(receiver.full_name),
         full_name:            fixVal(receiver.full_name),
         account_owner:        fixVal(receiver.full_name),
@@ -182,38 +207,83 @@ app.all(["/search_account", "/get_recipient", "/api/get_recipient"], async (req,
     });
 });
 
-/* 💸 4. TRANSFER API */
+/* 💸 TRANSFER - التحويل والرصيد والبيانات */
 app.post(["/update_balance", "/api/update_balance"], async (req, res) => {
     const fromAcc = req.body.account_number || req.body.p1;
     const toAcc   = req.body.target_account_identifier_for_server || req.body.p2;
     const amount  = parseFloat(req.body.transfer_amount || req.body.p3 || 0);
 
-    if (!fromAcc || !toAcc || isNaN(amount) || amount <= 0)
-        return res.json({ status: "failed", success: false, new_balance: 0, balance: 0, message: "Invalid transfer data" });
+    // ✅ تحقق من البيانات
+    if (!fromAcc || !toAcc || isNaN(amount) || amount <= 0) {
+        return res.json({ 
+            status: "failed", 
+            success: false, 
+            new_balance: 0, 
+            balance: 0, 
+            message: "Invalid transfer data" 
+        });
+    }
 
+    // ✅ اقرأ بيانات المرسل
     const { data: sender } = await supabase
-        .from("profiles").select("*").eq("account_number_short", fromAcc).maybeSingle();
+        .from("profiles")
+        .select("*")
+        .eq("account_number_short", fromAcc)
+        .maybeSingle();
     
-    if (!sender) return res.json({ status: "failed", success: false, new_balance: 0, balance: 0, message: "Sender not found" });
+    if (!sender) {
+        return res.json({ 
+            status: "failed", 
+            success: false, 
+            new_balance: 0, 
+            balance: 0, 
+            message: "Sender not found" 
+        });
+    }
 
     const senderBal = fixNum(sender.balance);
-    if (senderBal < amount) return res.json({ status: "failed", success: false, new_balance: senderBal, balance: senderBal, message: "Insufficient balance" });
+    
+    // ✅ تحقق من الرصيد
+    if (senderBal < amount) {
+        return res.json({ 
+            status: "failed", 
+            success: false, 
+            new_balance: senderBal, 
+            balance: senderBal, 
+            message: "Insufficient balance" 
+        });
+    }
 
+    // ✅ اطرح الأرقام الزائدة من رقم المستقبل
     let toAccShort = toAcc;
     if (toAcc && toAcc.length >= 7) toAccShort = toAcc.slice(-7);
 
+    // ✅ اقرأ بيانات المستقبل
     const { data: receiver } = await supabase
-        .from("profiles").select("*").eq("account_number_short", toAccShort).maybeSingle();
+        .from("profiles")
+        .select("*")
+        .eq("account_number_short", toAccShort)
+        .maybeSingle();
     
-    if (!receiver) return res.json({ status: "failed", success: false, new_balance: senderBal, balance: senderBal, message: "Receiver not found" });
+    if (!receiver) {
+        return res.json({ 
+            status: "failed", 
+            success: false, 
+            new_balance: senderBal, 
+            balance: senderBal, 
+            message: "Receiver not found" 
+        });
+    }
 
+    // ✅ حساب الأرصدة الجديدة
     const newSenderBal   = senderBal - amount;
     const newReceiverBal = fixNum(receiver.balance) + amount;
 
-    // تحديث رصيد المرسل والمستقبل
+    // ✅ حدّث الأرصدة في Supabase
     await supabase.from("profiles").update({ balance: newSenderBal }).eq("account_number_short", fromAcc);
     await supabase.from("profiles").update({ balance: newReceiverBal }).eq("account_number_short", toAccShort);
 
+    // ✅ سجّل العملية
     const txId = "TX" + Date.now();
     await supabase.from("transactions").insert([{
         transaction_id:       txId,
@@ -227,7 +297,7 @@ app.post(["/update_balance", "/api/update_balance"], async (req, res) => {
         comment:              ""
     }]);
 
-    // ✅ ارجع البيانات الكاملة من Database
+    // ✅ ارجع البيانات الكاملة (للإشعار الأخضر والتحديث)
     res.json({
         status:              "success",
         success:             true,
@@ -251,20 +321,16 @@ app.post(["/update_balance", "/api/update_balance"], async (req, res) => {
     });
 });
 
-/* ========== ADMIN PANEL ENDPOINTS ========== */
+// ========== ADMIN ENDPOINTS ==========
 
-/* 📋 5. GET ALL ACCOUNTS */
 app.get("/admin-api/accounts", async (req, res) => {
     if (!req.session.authenticated) return res.status(401).json({ error: "Unauthorized" });
-    
     const { data: accounts } = await supabase.from("profiles").select("*");
     res.json({ accounts: accounts || [] });
 });
 
-/* ➕ 6. CREATE ACCOUNT */
 app.post("/admin-api/create-account", async (req, res) => {
     if (!req.session.authenticated) return res.status(401).json({ error: "Unauthorized" });
-    
     const { account_number, full_name, password, balance, account_type, branch } = req.body;
     
     if (!account_number || !full_name || !password) {
@@ -285,10 +351,8 @@ app.post("/admin-api/create-account", async (req, res) => {
     res.json({ status: "success", message: "Account created successfully" });
 });
 
-/* 🔍 7. GET ACCOUNT INFO */
 app.post("/admin-api/get-account", async (req, res) => {
     if (!req.session.authenticated) return res.status(401).json({ error: "Unauthorized" });
-    
     const { account_number } = req.body;
     if (!account_number) return res.json({ status: "failed", message: "Account number required" });
 
@@ -302,10 +366,8 @@ app.post("/admin-api/get-account", async (req, res) => {
     res.json({ status: "success", account });
 });
 
-/* 💳 8. RECHARGE ACCOUNT (شحن الحساب) */
 app.post("/admin-api/recharge", async (req, res) => {
     if (!req.session.authenticated) return res.status(401).json({ error: "Unauthorized" });
-    
     const { account_number, amount } = req.body;
     if (!account_number || !amount) return res.json({ status: "failed", message: "Missing fields" });
 
@@ -326,7 +388,6 @@ app.post("/admin-api/recharge", async (req, res) => {
 
     if (error) return res.json({ status: "failed", message: error.message });
 
-    // سجل العملية
     await supabase.from("transactions").insert([{
         transaction_id:       "CHG" + Date.now(),
         transaction_type:     "شحن",
@@ -339,17 +400,11 @@ app.post("/admin-api/recharge", async (req, res) => {
         comment:              "شحن من الأدمن"
     }]);
 
-    res.json({ 
-        status: "success", 
-        message: "Account recharged successfully",
-        new_balance: newBalance
-    });
+    res.json({ status: "success", message: "Account recharged", new_balance: newBalance });
 });
 
-/* 📊 9. GET ACCOUNT TRANSACTIONS */
 app.post("/admin-api/transactions", async (req, res) => {
     if (!req.session.authenticated) return res.status(401).json({ error: "Unauthorized" });
-    
     const { account_number } = req.body;
     if (!account_number) return res.json({ status: "failed", message: "Account number required" });
 
@@ -359,16 +414,11 @@ app.post("/admin-api/transactions", async (req, res) => {
         .or(`from_account_number.eq.${account_number},to_account_number.eq.${account_number}`)
         .order("transaction_date", { ascending: false });
 
-    res.json({ 
-        status: "success",
-        transactions: transactions || [] 
-    });
+    res.json({ status: "success", transactions: transactions || [] });
 });
 
-/* ✏️ 10. UPDATE ACCOUNT */
 app.post("/admin-api/update-account", async (req, res) => {
     if (!req.session.authenticated) return res.status(401).json({ error: "Unauthorized" });
-    
     const { account_number, full_name, balance, account_type, branch } = req.body;
     if (!account_number) return res.json({ status: "failed", message: "Account number required" });
 
@@ -383,13 +433,11 @@ app.post("/admin-api/update-account", async (req, res) => {
         .eq("account_number_short", account_number);
 
     if (error) return res.json({ status: "failed", message: error.message });
-    res.json({ status: "success", message: "Account updated successfully" });
+    res.json({ status: "success", message: "Account updated" });
 });
 
-/* 🗑️ 11. DELETE ACCOUNT */
 app.post("/admin-api/delete-account", async (req, res) => {
     if (!req.session.authenticated) return res.status(401).json({ error: "Unauthorized" });
-    
     const { account_number } = req.body;
     if (!account_number) return res.json({ status: "failed", message: "Account number required" });
 
@@ -399,15 +447,16 @@ app.post("/admin-api/delete-account", async (req, res) => {
         .eq("account_number_short", account_number);
 
     if (error) return res.json({ status: "failed", message: error.message });
-    res.json({ status: "success", message: "Account deleted successfully" });
+    res.json({ status: "success", message: "Account deleted" });
 });
 
-/* ✅ API PING */
+/* ✅ HEALTH CHECK */
 app.get("/api", (req, res) => {
     res.json({ status: "ok", timestamp: new Date().toISOString() });
 });
 
 app.listen(PORT, () => {
-    console.log(`✅ Server running on port ${PORT}`);
-    console.log(`🚀 Keep-alive enabled - Server won't sleep`);
+    console.log(`✅ Server FINAL running on port ${PORT}`);
+    console.log(`🚀 Keep-alive enabled`);
+    console.log(`📊 All endpoints active`);
 });
