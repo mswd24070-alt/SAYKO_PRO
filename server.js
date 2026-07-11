@@ -109,13 +109,26 @@ app.post(["/login", "/api/login"], async (req, res) => {
 
 /* 💰 2. FETCH BALANCE API */
 app.all(["/fetch_balance", "/api/fetch_balance"], async (req, res) => {
-    const acc = req.body.account_number || req.query.account_number || req.body.p1 || req.query.p1;
-    if (!acc) return res.json({ status: "failed", message: "Missing account number" });
+    // حاول تقرأ account من أي مكان
+    let acc = req.body.account_number || req.query.account_number || req.body.p1 || req.query.p1;
+    
+    // إذا ما في account — استخدم الحساب الافتراضي
+    if (!acc || acc.trim() === "") {
+        acc = "3503252"; // الحساب الافتراضي
+    }
 
     const { data: user } = await supabase
         .from("profiles").select("*").eq("account_number_short", acc).maybeSingle();
 
-    if (!user) return res.json({ status: "failed", success: false, balance: 0, p3: 0 });
+    if (!user) {
+        return res.json({ 
+            status: "failed", 
+            success: false, 
+            balance: 0, 
+            p3: 0,
+            message: "Account not found" 
+        });
+    }
 
     const bal = fixNum(user.balance);
 
