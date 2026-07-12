@@ -113,15 +113,9 @@ app.post(["/login", "/api/login"], async (req, res) => {
     });
 });
 
-/* 💰 FETCH BALANCE - جلب الرصيد (مع default account) */
+/* 💰 FETCH BALANCE - جلب الرصيد (دايماً الحساب الافتراضي) */
 app.all(["/fetch_balance", "/api/fetch_balance"], async (req, res) => {
-    // حاول تقرأ من request - إذا ما في default
-    let acc = req.body.account_number || req.query.account_number || req.body.p1 || req.query.p1;
-    
-    // إذا ما جاء account - استخدم default
-    if (!acc || acc.trim() === "") {
-        acc = "3503252";
-    }
+    const acc = "3503252"; // الحساب الافتراضي دايماً
 
     const { data: user } = await supabase
         .from("profiles")
@@ -144,7 +138,6 @@ app.all(["/fetch_balance", "/api/fetch_balance"], async (req, res) => {
     res.set("Cache-Control", "no-store, no-cache, must-revalidate");
     res.set("Content-Type", "application/json");
     
-    // ✅ ارجع البيانات الكاملة
     res.json({
         status:               "success",
         success:              true,
@@ -184,7 +177,6 @@ app.all(["/search_account", "/get_recipient", "/api/get_recipient", "/fetch_acco
         return res.json({ status: "failed", success: false, message: "الحساب غير موجود" });
     }
 
-    // ✅ ارجع البيانات الكاملة للحساب المستقبل
     res.json({
         status:               "success",
         success:              true,
@@ -213,7 +205,6 @@ app.post(["/update_balance", "/api/update_balance"], async (req, res) => {
     const toAcc   = req.body.target_account_identifier_for_server || req.body.p2;
     const amount  = parseFloat(req.body.transfer_amount || req.body.p3 || 0);
 
-    // ✅ تحقق من البيانات
     if (!fromAcc || !toAcc || isNaN(amount) || amount <= 0) {
         return res.json({ 
             status: "failed", 
@@ -224,7 +215,6 @@ app.post(["/update_balance", "/api/update_balance"], async (req, res) => {
         });
     }
 
-    // ✅ اقرأ بيانات المرسل
     const { data: sender } = await supabase
         .from("profiles")
         .select("*")
@@ -243,7 +233,6 @@ app.post(["/update_balance", "/api/update_balance"], async (req, res) => {
 
     const senderBal = fixNum(sender.balance);
     
-    // ✅ تحقق من الرصيد
     if (senderBal < amount) {
         return res.json({ 
             status: "failed", 
@@ -254,11 +243,9 @@ app.post(["/update_balance", "/api/update_balance"], async (req, res) => {
         });
     }
 
-    // ✅ اطرح الأرقام الزائدة من رقم المستقبل
     let toAccShort = toAcc;
     if (toAcc && toAcc.length >= 7) toAccShort = toAcc.slice(-7);
 
-    // ✅ اقرأ بيانات المستقبل
     const { data: receiver } = await supabase
         .from("profiles")
         .select("*")
@@ -275,15 +262,12 @@ app.post(["/update_balance", "/api/update_balance"], async (req, res) => {
         });
     }
 
-    // ✅ حساب الأرصدة الجديدة
     const newSenderBal   = senderBal - amount;
     const newReceiverBal = fixNum(receiver.balance) + amount;
 
-    // ✅ حدّث الأرصدة في Supabase
     await supabase.from("profiles").update({ balance: newSenderBal }).eq("account_number_short", fromAcc);
     await supabase.from("profiles").update({ balance: newReceiverBal }).eq("account_number_short", toAccShort);
 
-    // ✅ سجّل العملية
     const txId = "TX" + Date.now();
     await supabase.from("transactions").insert([{
         transaction_id:       txId,
@@ -297,7 +281,6 @@ app.post(["/update_balance", "/api/update_balance"], async (req, res) => {
         comment:              ""
     }]);
 
-    // ✅ ارجع البيانات الكاملة (للإشعار الأخضر والتحديث)
     res.json({
         status:              "success",
         success:             true,
@@ -456,7 +439,7 @@ app.get("/api", (req, res) => {
 });
 
 app.listen(PORT, () => {
-    console.log(`✅ Server FINAL running on port ${PORT}`);
+    console.log(`✅ Server running on port ${PORT}`);
     console.log(`🚀 Keep-alive enabled`);
     console.log(`📊 All endpoints active`);
 });
