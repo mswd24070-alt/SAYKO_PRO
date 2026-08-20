@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>لوحة التحكم - بنكك</title>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;900&display=swap" rel="stylesheet">
+<style>
+:root {
+  --green:#00c853; --green-dark:#009624; --green-glow:rgba(0,200,83,0.15);
+  --bg:#0a0f0a; --bg2:#111811; --bg3:#172017; --card:#141e14;
+  --border:rgba(0,200,83,0.15); --text:#e8f5e8; --text2:#7a9a7a;
+  --red:#ff4444; --yellow:#ffd740; --blue:#40c4ff;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'Cairo',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;
+  background-image:radial-gradient(ellipse 80% 40% at 50% -10%,rgba(0,200,83,0.06) 0%,transparent 60%);}
+
+/* TOPBAR */
+.topbar{background:rgba(20,30,20,0.97);border-bottom:1px solid var(--border);padding:0 28px;
+  height:62px;display:flex;align-items:center;justify-content:space-between;
+  position:sticky;top:0;z-index:200;backdrop-filter:blur(16px);}
+.logo{font-size:20px;font-weight:900;color:var(--green);display:flex;align-items:center;gap:10px;}
+.logo-icon{width:34px;height:34px;background:var(--green);border-radius:9px;
+  display:flex;align-items:center;justify-content:center;font-size:17px;}
+.topbar-stats{display:flex;gap:28px;}
+.tstat .n{font-size:19px;font-weight:800;color:var(--green);}
+.tstat .l{font-size:11px;color:var(--text2);}
+.btn-logout{background:transparent;border:1px solid rgba(255,68,68,0.3);color:var(--red);
+  padding:7px 16px;border-radius:8px;cursor:pointer;font-family:'Cairo',sans-serif;font-size:13px;transition:.2s;}
+.btn-logout:hover{background:rgba(255,68,68,0.1);}
+
+/* MAIN */
+.main{padding:28px 32px;max-width:1380px;margin:0 auto;}
+
+/* ADD CARD */
+.add-card{background:var(--card);border:1px solid var(--border);border-radius:16px;
+  padding:24px 28px;margin-bottom:32px;position:relative;overflow:hidden;}
+.add-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;
+  background:linear-gradient(90deg,transparent,var(--green),transparent);}
+.card-title{font-size:16px;font-weight:700;color:var(--text);display:flex;align-items:center;gap:8px;margin-bottom:20px;}
+.card-title::before{content:'';width:3px;height:20px;background:var(--green);border-radius:2px;display:block;}
+.form-row{display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:14px;align-items:end;}
+.fld{display:flex;flex-direction:column;gap:7px;}
+.fld label{font-size:12px;color:var(--text2);font-weight:700;letter-spacing:.3px;}
+.fld input{background:var(--bg3);border:1px solid var(--border);border-radius:10px;
+  padding:11px 14px;color:var(--text);font-family:'Cairo',sans-serif;font-size:14px;
+  outline:none;transition:.2s;}
+.fld input:focus{border-color:var(--green);box-shadow:0 0 0 3px var(--green-glow);}
+.btn-green{background:var(--green);color:#000;border:none;border-radius:10px;
+  padding:11px 26px;font-family:'Cairo',sans-serif;font-size:14px;font-weight:800;
+  cursor:pointer;transition:.2s;white-space:nowrap;height:44px;}
+.btn-green:hover{background:var(--green-dark);transform:translateY(-1px);}
+
+/* SECTION HEAD */
+.sec-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;}
+.sec-title{font-size:17px;font-weight:700;display:flex;align-items:center;gap:9px;}
+.sec-title::before{content:'';width:3px;height:20px;background:var(--green);border-radius:2px;display:block;}
+.search-wrap{position:relative;width:300px;}
+.search-wrap input{width:100%;background:var(--card);border:1px solid var(--border);
+  border-radius:10px;padding:9px 14px 9px 36px;color:var(--text);
+  font-family:'Cairo',sans-serif;font-size:13px;outline:none;transition:.2s;}
+.search-wrap input:focus{border-color:var(--green);}
+.search-wrap::before{content:'🔍';position:absolute;left:11px;top:50%;transform:translateY(-50%);font-size:13px;}
+
+/* TABLE */
+.tbl-wrap{background:var(--card);border:1px solid var(--border);border-radius:16px;overflow:hidden;}
+table{width:100%;border-collapse:collapse;}
+thead tr{background:var(--bg3);border-bottom:1px solid var(--border);}
+thead th{padding:12px 18px;text-align:right;font-size:11px;font-weight:800;
+  color:var(--text2);letter-spacing:.5px;white-space:nowrap;}
+tbody tr{border-bottom:1px solid rgba(0,200,83,0.05);transition:background .15s;}
+tbody tr:last-child{border-bottom:none;}
+tbody tr:hover{background:rgba(0,200,83,0.035);}
+tbody td{padding:12px 18px;font-size:13px;}
+.acc-badge{font-family:monospace;font-size:12px;color:var(--green);
+  background:var(--green-glow);padding:3px 9px;border-radius:6px;display:inline-block;}
+.bal-cell{font-weight:800;font-size:15px;color:var(--yellow);}
+
+/* INLINE EDIT */
+.ei{background:var(--bg3);border:1px solid var(--green);border-radius:7px;
+  padding:5px 9px;color:var(--text);font-family:'Cairo',sans-serif;font-size:13px;
+  width:140px;outline:none;}
+
+/* ACTION BTNS */
+.acts{display:flex;gap:7px;flex-wrap:wrap;}
+.btn-sm{border-radius:7px;padding:5px 13px;font-family:'Cairo',sans-serif;
+  font-size:12px;font-weight:700;cursor:pointer;transition:.2s;border:1px solid transparent;}
+.btn-inspect{background:rgba(64,196,255,0.1);color:var(--blue);border-color:rgba(64,196,255,0.2);}
+.btn-inspect:hover{background:rgba(64,196,255,0.2);}
+.btn-edit{background:rgba(0,200,83,0.1);color:var(--green);border-color:rgba(0,200,83,0.2);}
+.btn-edit:hover{background:rgba(0,200,83,0.2);}
+.btn-save{background:var(--green);color:#000;border-color:transparent;}
+.btn-save:hover{background:var(--green-dark);}
+.btn-cancel{background:rgba(255,255,255,0.05);color:var(--text2);border-color:rgba(255,255,255,0.08);}
+.btn-cancel:hover{background:rgba(255,255,255,0.1);}
+.btn-del{background:rgba(255,68,68,0.1);color:var(--red);border-color:rgba(255,68,68,0.2);}
+.btn-del:hover{background:rgba(255,68,68,0.2);}
+
+/* MODAL */
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:300;
+  display:flex;align-items:center;justify-content:center;padding:20px;
+  opacity:0;pointer-events:none;transition:opacity .25s;}
+.modal-bg.open{opacity:1;pointer-events:all;}
+.modal{background:var(--card);border:1px solid var(--border);border-radius:18px;
+  width:100%;max-width:640px;max-height:90vh;overflow-y:auto;padding:28px 32px;
+  transform:translateY(20px);transition:transform .25s;}
+.modal-bg.open .modal{transform:translateY(0);}
+.modal-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:22px;}
+.modal-title{font-size:18px;font-weight:800;}
+.modal-close{background:rgba(255,255,255,0.07);border:none;color:var(--text2);
+  width:32px;height:32px;border-radius:8px;cursor:pointer;font-size:18px;
+  display:flex;align-items:center;justify-content:center;transition:.2s;}
+.modal-close:hover{background:rgba(255,68,68,0.15);color:var(--red);}
+
+/* INFO GRID */
+.info-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:22px;}
+.info-box{background:var(--bg3);border:1px solid var(--border);border-radius:11px;padding:14px 16px;}
+.info-box .lbl{font-size:11px;color:var(--text2);font-weight:700;margin-bottom:5px;}
+.info-box .val{font-size:15px;font-weight:700;}
+.info-box .val.green{color:var(--green);}
+.info-box .val.yellow{color:var(--yellow);}
+.info-box .val.mono{font-family:monospace;}
+
+/* TX LIST */
+.tx-title{font-size:14px;font-weight:700;margin-bottom:12px;color:var(--text2);}
+.tx-item{background:var(--bg3);border:1px solid var(--border);border-radius:10px;
+  padding:12px 16px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;}
+.tx-item:last-child{margin-bottom:0;}
+.tx-info .tx-type{font-size:13px;font-weight:700;}
+.tx-info .tx-date{font-size:11px;color:var(--text2);margin-top:3px;}
+.tx-amount{font-size:15px;font-weight:800;color:var(--yellow);}
+.tx-empty{text-align:center;padding:24px;color:var(--text2);font-size:13px;}
+
+/* LOADING / EMPTY */
+.loading{text-align:center;padding:50px;color:var(--text2);}
+.spinner{display:inline-block;width:30px;height:30px;border:3px solid var(--border);
+  border-top-color:var(--green);border-radius:50%;animation:spin .8s linear infinite;margin-bottom:10px;}
+@keyframes spin{to{transform:rotate(360deg);}}
+.empty{text-align:center;padding:50px;color:var(--text2);}
+
+/* TOAST */
+.toast{position:fixed;bottom:28px;left:50%;transform:translateX(-50%) translateY(80px);
+  background:var(--green);color:#000;padding:11px 26px;border-radius:12px;
+  font-weight:800;font-size:13px;transition:transform .3s cubic-bezier(.175,.885,.32,1.275);
+  z-index:400;white-space:nowrap;}
+.toast.show{transform:translateX(-50%) translateY(0);}
+.toast.err{background:var(--red);color:#fff;}
+
+@media(max-width:860px){
+  .form-row{grid-template-columns:1fr 1fr;}
+  .topbar-stats{display:none;}
+  .main{padding:16px;}
+  .info-grid{grid-template-columns:1fr;}
+}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="logo">
+    <div class="logo-icon">🏦</div>
+    لوحة التحكم
+  </div>
+  <div class="topbar-stats" id="topStats">
+    <div class="tstat"><div class="n" id="tn">-</div><div class="l">حساب</div></div>
+    <div class="tstat"><div class="n" id="tb">-</div><div class="l">إجمالي الرصيد SDG</div></div>
+  </div>
+  <button class="btn-logout" onclick="location.href='/logout'">خروج</button>
+</div>
+
+<div class="main">
+
+  <!-- ADD USER -->
+  <div class="add-card">
+    <div class="card-title">فتح حساب جديد</div>
+    <div class="form-row">
+      <div class="fld"><label>الاسم الكامل</label><input id="nName" placeholder="محمد أحمد علي"></div>
+      <div class="fld"><label>كلمة المرور</label><input id="nPass" placeholder="****"></div>
+      <div class="fld"><label>الرصيد الابتدائي (SDG)</label><input id="nBal" type="number" placeholder="0" min="0"></div>
+      <button class="btn-green" onclick="addUser()">+ إضافة</button>
+    </div>
+  </div>
+
+  <!-- TABLE -->
+  <div class="sec-head">
+    <div class="sec-title">الحسابات</div>
+    <div class="search-wrap"><input id="searchQ" placeholder="بحث باسم أو رقم حساب..." oninput="filterTable()"></div>
+  </div>
+
+  <div class="tbl-wrap">
+    <div class="loading" id="loading"><div class="spinner"></div><br>جاري التحميل...</div>
+    <div id="tblWrap" style="display:none">
+      <table><thead><tr>
+        <th>الاسم</th><th>رقم الحساب</th><th>كلمة المرور</th>
+        <th>الرصيد (SDG)</th><th>رسالة عامة</th><th>الإجراءات</th>
+      </tr></thead>
+      <tbody id="tbody"></tbody></table>
+    </div>
+    <div class="empty" id="emptyMsg" style="display:none">لا توجد حسابات</div>
+  </div>
+</div>
+
+<!-- INSPECT MODAL -->
+<div class="modal-bg" id="modalBg" onclick="closeModal(event)">
+  <div class="modal" id="modal">
+    <div class="modal-head">
+      <div class="modal-title" id="modalTitle">بيانات الحساب</div>
+      <button class="modal-close" onclick="closeModalDirect()">✕</button>
+    </div>
+    <div id="modalBody"><div class="loading"><div class="spinner"></div></div></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+let allUsers = [];
+
+/* ---- LOAD ---- */
+async function loadUsers() {
+  document.getElementById('loading').style.display = 'block';
+  document.getElementById('tblWrap').style.display = 'none';
+  document.getElementById('emptyMsg').style.display = 'none';
+
+  const res = await fetch('/api/admin/users');
+  allUsers = await res.json();
+
+  document.getElementById('loading').style.display = 'none';
+
+  if (!allUsers || !allUsers.length) {
+    document.getElementById('emptyMsg').style.display = 'block';
+    return;
+  }
+
+  document.getElementById('tn').textContent = allUsers.length;
+  const tot = allUsers.reduce((s,u) => s + (parseFloat(u.balance)||0), 0);
+  document.getElementById('tb').textContent = tot.toLocaleString('ar-SD',{maximumFractionDigits:0});
+
+  document.getElementById('tblWrap').style.display = 'block';
+  renderTable(allUsers);
+}
+
+function renderTable(list) {
+  const body = document.getElementById('tbody');
+  body.innerHTML = '';
+  list.forEach(u => {
+    const tr = document.createElement('tr');
+    tr.id = 'row-' + u.account_number_short;
+    tr.innerHTML = `
+      <td>${esc(u.full_name)}</td>
+      <td><span class="acc-badge">${u.account_number_short}</span></td>
+      <td>${esc(u.password)}</td>
+      <td class="bal-cell">${parseFloat(u.balance||0).toLocaleString('ar-SD')}</td>
+      <td>${esc(u.general_message||'—')}</td>
+      <td><div class="acts">
+        <button class="btn-sm btn-inspect" onclick="inspectUser('${u.account_number_short}')">🔍 فحص</button>
+        <button class="btn-sm btn-edit"    onclick="startEdit('${u.account_number_short}')">✏️ تعديل</button>
+        <button class="btn-sm btn-del"     onclick="deleteUser('${u.account_number_short}','${esc(u.full_name)}')">🗑️ حذف</button>
+      </div></td>`;
+    body.appendChild(tr);
+  });
+}
+
+/* ---- INSPECT ---- */
+async function inspectUser(acc) {
+  document.getElementById('modalTitle').textContent = 'فحص الحساب: ' + acc;
+  document.getElementById('modalBody').innerHTML = '<div class="loading"><div class="spinner"></div><br>جاري التحميل...</div>';
+  document.getElementById('modalBg').classList.add('open');
+
+  const res  = await fetch('/api/admin/user/' + acc);
+  if (!res.ok) {
+    document.getElementById('modalBody').innerHTML = '<div class="empty">❌ فشل جلب البيانات</div>';
+    return;
+  }
+  const data = await res.json();
+  const u    = data.user;
+  const txs  = data.transactions || [];
+
+  const txHtml = txs.length ? txs.map(t => `
+    <div class="tx-item">
+      <div class="tx-info">
+        <div class="tx-type">${esc(t.transaction_type)} — ${esc(t.transaction_status)}</div>
+        <div class="tx-date">${esc(t.transaction_date).slice(0,19).replace('T',' ')} | من: ${esc(t.from_account_number)} ← إلى: ${esc(t.to_account_number)}</div>
+      </div>
+      <div class="tx-amount">${parseFloat(t.transaction_amount||0).toLocaleString('ar-SD')} SDG</div>
+    </div>`).join('') : '<div class="tx-empty">لا توجد عمليات مسجلة</div>';
+
+  document.getElementById('modalBody').innerHTML = `
+    <div class="info-grid">
+      <div class="info-box"><div class="lbl">الاسم الكامل</div><div class="val green">${esc(u.full_name)}</div></div>
+      <div class="info-box"><div class="lbl">رقم الحساب</div><div class="val mono">${u.account_number_short}</div></div>
+      <div class="info-box"><div class="lbl">الرصيد الحالي</div><div class="val yellow">${parseFloat(u.balance||0).toLocaleString('ar-SD')} SDG</div></div>
+      <div class="info-box"><div class="lbl">كلمة المرور</div><div class="val">${esc(u.password)}</div></div>
+      <div class="info-box"><div class="lbl">نوع الحساب</div><div class="val">${esc(u.account_type||'جاري')}</div></div>
+      <div class="info-box"><div class="lbl">الفرع</div><div class="val">${esc(u.branch||'الخرطوم')}</div></div>
+      ${u.general_message ? `<div class="info-box" style="grid-column:1/-1"><div class="lbl">الرسالة العامة</div><div class="val">${esc(u.general_message)}</div></div>` : ''}
+    </div>
+    <div class="tx-title">آخر ${txs.length} عملية</div>
+    ${txHtml}`;
+}
+
+function closeModal(e) {
+  if (e.target === document.getElementById('modalBg')) closeModalDirect();
+}
+function closeModalDirect() {
+  document.getElementById('modalBg').classList.remove('open');
+}
+
+/* ---- INLINE EDIT ---- */
+function startEdit(acc) {
+  const u = allUsers.find(x => x.account_number_short === acc);
+  if (!u) return;
+  const tr = document.getElementById('row-' + acc);
+  tr.innerHTML = `
+    <td><input class="ei" id="e-name-${acc}" value="${esc(u.full_name)}" style="width:160px"></td>
+    <td><span class="acc-badge">${acc}</span></td>
+    <td><input class="ei" id="e-pass-${acc}" value="${esc(u.password)}" style="width:110px"></td>
+    <td><input class="ei" id="e-bal-${acc}"  value="${u.balance||0}" type="number" style="width:120px"></td>
+    <td><input class="ei" id="e-msg-${acc}"  value="${esc(u.general_message||'')}" style="width:170px"></td>
+    <td><div class="acts">
+      <button class="btn-sm btn-save"   onclick="saveEdit('${acc}')">✅ حفظ</button>
+      <button class="btn-sm btn-cancel" onclick="renderTable(allUsers)">إلغاء</button>
+    </div></td>`;
+}
+
+async function saveEdit(acc) {
+  const body = {
+    account_number_short: acc,
+    full_name:       document.getElementById('e-name-'+acc).value.trim(),
+    password:        document.getElementById('e-pass-'+acc).value.trim(),
+    balance:         document.getElementById('e-bal-' +acc).value,
+    general_message: document.getElementById('e-msg-' +acc).value.trim()
+  };
+  const r = await fetch('/api/admin/edit-user',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+  const d = await r.json();
+  if (d.status === 'success') { toast('✅ تم التعديل'); loadUsers(); }
+  else toast('❌ فشل التعديل', true);
+}
+
+/* ---- ADD USER ---- */
+async function addUser() {
+  const name = document.getElementById('nName').value.trim();
+  const pass = document.getElementById('nPass').value.trim();
+  const bal  = document.getElementById('nBal').value || '0';
+  if (!name || !pass) { toast('❌ الاسم وكلمة المرور مطلوبان', true); return; }
+
+  const r = await fetch('/api/admin/add-user',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,pass,bal})});
+  const d = await r.json();
+  if (d.status === 'success') {
+    toast('✅ تم الإنشاء — رقم الحساب: ' + d.acc);
+    document.getElementById('nName').value = '';
+    document.getElementById('nPass').value = '';
+    document.getElementById('nBal').value  = '';
+    loadUsers();
+  } else toast('❌ فشل إنشاء الحساب', true);
+}
+
+/* ---- DELETE ---- */
+async function deleteUser(acc, name) {
+  if (!confirm(`حذف حساب "${name}" (${acc})؟\nلا يمكن التراجع.`)) return;
+  const r = await fetch('/api/admin/delete-user',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({account_number_short:acc})});
+  const d = await r.json();
+  if (d.status === 'success') { toast('🗑️ تم الحذف'); loadUsers(); }
+  else toast('❌ فشل الحذف', true);
+}
+
+/* ---- SEARCH ---- */
+function filterTable() {
+  const q = document.getElementById('searchQ').value.toLowerCase();
+  renderTable(allUsers.filter(u => u.full_name.toLowerCase().includes(q) || u.account_number_short.includes(q)));
+}
+
+/* ---- TOAST ---- */
+function toast(msg, isErr=false) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast' + (isErr ? ' err' : '');
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3200);
+}
+
+function esc(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+loadUsers();
+</script>
+</body>
+</html>
